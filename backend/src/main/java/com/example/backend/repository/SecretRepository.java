@@ -10,4 +10,5 @@ import java.util.UUID;
 @Repository
 public interface SecretRepository extends JpaRepository<Secret, UUID> {
     List<Secret> findByEnvironmentId(UUID environmentId);
+    List<Secret> findBySecretKeyContainingIgnoreCase(String key);
 }
