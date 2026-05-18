@@ -43,8 +43,9 @@ public class SecurityConfig {
             )
 
             .authorizeHttpRequests(auth -> auth
+                // /api/auth/signup and /api/auth/login are public — no token needed
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/users").permitAll()
+                // Every other endpoint requires a valid JWT token
                 .anyRequest().authenticated()
             )
 
