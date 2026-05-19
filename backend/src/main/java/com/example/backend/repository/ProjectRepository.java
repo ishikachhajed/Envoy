@@ -9,5 +9,6 @@ import java.util.UUID;
 
 @Repository
 public interface ProjectRepository extends JpaRepository<Project, UUID> {
-    List<Project> findByUserId(UUID userId);
+    // SELECT * FROM projects WHERE organization_id = ?
+    List<Project> findByOrganizationId(UUID organizationId);
 }
