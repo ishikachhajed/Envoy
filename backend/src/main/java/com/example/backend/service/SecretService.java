@@ -3,8 +3,10 @@ package com.example.backend.service;
 import com.example.backend.dto.CreateSecretRequestDTO;
 import com.example.backend.dto.SecretResponseDTO;
 import com.example.backend.entity.Environment;
+import com.example.backend.entity.Membership;
 import com.example.backend.entity.Secret;
 import com.example.backend.entity.User;
+import com.example.backend.enums.Role;
 import com.example.backend.repository.EnvironmentRepository;
 import com.example.backend.repository.MembershipRepository;
 import com.example.backend.repository.SecretRepository;
@@ -21,6 +23,7 @@ import java.util.stream.Collectors;
 /**
  * SecretService: Handles tenant isolation context, encryption writes, 
  * and AES-GCM-256 decryption reads for environment secrets.
+ * Enforces strict Role-Based Access Control (RBAC) key masking and delete gates.
  */
 @Service
 public class SecretService {
@@ -80,7 +83,8 @@ public class SecretService {
     }
 
     /**
-     * Lists all secrets belonging to a specific environment, decrypted on the fly.
+     * Lists all secrets belonging to a specific environment.
+     * Enforces GCM decryption for ADMIN roles and masks values for MEMBER roles.
      */
     @Transactional(readOnly = true)
     public List<SecretResponseDTO> getSecretsByEnvironment(UUID envId) {
@@ -88,20 +92,25 @@ public class SecretService {
         Environment environment = environmentRepository.findById(envId)
                 .orElseThrow(() -> new RuntimeException("Environment not found."));
 
-        // Trace ownership up to Organization level and check membership
-        validateEnvironmentAccess(environment, currentUser.getId());
+        // Trace ownership and return membership to check role
+        Membership membership = validateEnvironmentAccess(environment, currentUser.getId());
+        boolean isAdmin = membership.getRole() == Role.ADMIN;
 
         List<Secret> secrets = secretRepository.findByEnvironmentId(envId);
 
         return secrets.stream()
                 .map(s -> {
                     try {
-                        // Decrypt ciphertext using its corresponding random IV
-                        String decryptedVal = encryptionService.decrypt(s.getSecretValue(), s.getIv());
+                        // Key Masking: Only Decrypt if active role is ADMIN
+                        String displayValue = "••••••••••••";
+                        if (isAdmin) {
+                            displayValue = encryptionService.decrypt(s.getSecretValue(), s.getIv());
+                        }
+
                         return new SecretResponseDTO(
                                 s.getId(),
                                 s.getSecretKey(),
-                                decryptedVal,
+                                displayValue,
                                 s.getCreatedAt(),
                                 s.getUpdatedAt()
                         );
@@ -114,6 +123,7 @@ public class SecretService {
 
     /**
      * Deletes a secret from the environment database.
+     * Enforces Admin-only restriction.
      */
     @Transactional
     public void deleteSecret(UUID secretId) {
@@ -121,8 +131,11 @@ public class SecretService {
         Secret secret = secretRepository.findById(secretId)
                 .orElseThrow(() -> new RuntimeException("Secret not found."));
 
-        // Trace ownership up to Organization level and check membership
-        validateEnvironmentAccess(secret.getEnvironment(), currentUser.getId());
+        // Trace ownership and verify Admin permissions
+        Membership membership = validateEnvironmentAccess(secret.getEnvironment(), currentUser.getId());
+        if (membership.getRole() != Role.ADMIN) {
+            throw new RuntimeException("Access Denied: Only Admins are authorized to delete environment secrets.");
+        }
 
         secretRepository.delete(secret);
     }
@@ -135,9 +148,9 @@ public class SecretService {
                 .orElseThrow(() -> new RuntimeException("Logged in user not found."));
     }
 
-    private void validateEnvironmentAccess(Environment environment, UUID userId) {
+    private Membership validateEnvironmentAccess(Environment environment, UUID userId) {
         UUID orgId = environment.getProject().getOrganization().getId();
-        membershipRepository.findByUserIdAndOrganizationId(userId, orgId)
+        return membershipRepository.findByUserIdAndOrganizationId(userId, orgId)
                 .orElseThrow(() -> new RuntimeException("Access Denied: You are not a member of this organization."));
     }
 }
