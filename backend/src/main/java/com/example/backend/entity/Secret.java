@@ -4,6 +4,10 @@ import jakarta.persistence.*;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
+/**
+ * Secret: Represents a secure user key-value pair belonging to a specific environment.
+ * Uses AES-GCM-256 for value confidentiality, storing unique IVs side-by-side with ciphertext.
+ */
 @Entity
 @Table(name = "secrets")
 public class Secret {
@@ -12,7 +16,6 @@ public class Secret {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    // Defines the Foreign Key relationship to the Environment table
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "environment_id", nullable = false)
     private Environment environment;
@@ -22,6 +25,10 @@ public class Secret {
 
     @Column(name = "secret_value", nullable = false, columnDefinition = "TEXT")
     private String secretValue;
+
+    // Stores the unique random Initialization Vector (Base64 encoded) used to encrypt the value
+    @Column(name = "iv", nullable = false)
+    private String iv;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private ZonedDateTime createdAt;
@@ -41,6 +48,9 @@ public class Secret {
 
     public String getSecretValue() { return secretValue; }
     public void setSecretValue(String secretValue) { this.secretValue = secretValue; }
+
+    public String getIv() { return iv; }
+    public void setIv(String iv) { this.iv = iv; }
 
     public ZonedDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(ZonedDateTime createdAt) { this.createdAt = createdAt; }
