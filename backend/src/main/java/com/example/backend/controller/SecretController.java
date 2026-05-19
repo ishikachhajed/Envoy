@@ -1,57 +1,58 @@
 package com.example.backend.controller;
 
-import com.example.backend.entity.Secret;
-import com.example.backend.repository.SecretRepository;
-import com.example.backend.security.EncryptionService;
+import com.example.backend.dto.CreateSecretRequestDTO;
+import com.example.backend.dto.SecretResponseDTO;
+import com.example.backend.service.SecretService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
+/**
+ * SecretController: Exposes secure nested rest boundaries for secrets management.
+ * Relies exclusively on SecretService for tenant boundary checks and AES-GCM-256 ciphers.
+ */
 @RestController
-@RequestMapping("/api/secrets")
+@RequestMapping
 public class SecretController {
 
-    private final SecretRepository secretRepository;
-    private final EncryptionService encryptionService;
+    private final SecretService secretService;
 
-    public SecretController(SecretRepository secretRepository, EncryptionService encryptionService) {
-        this.secretRepository = secretRepository;
-        this.encryptionService = encryptionService;
+    public SecretController(SecretService secretService) {
+        this.secretService = secretService;
     }
 
-    @PostMapping
-    public Secret createSecret(@RequestBody Secret secret) throws Exception {
-        String encryptedValue = encryptionService.encrypt(secret.getSecretValue());
-        secret.setSecretValue(encryptedValue);
-        return secretRepository.save(secret);
+    /**
+     * Creates and encrypts a secret inside a specific environment.
+     * Endpoint: POST /api/environments/{envId}/secrets
+     */
+    @PostMapping("/api/environments/{envId}/secrets")
+    public ResponseEntity<SecretResponseDTO> createSecret(
+            @PathVariable UUID envId,
+            @RequestBody CreateSecretRequestDTO dto) {
+        SecretResponseDTO response = secretService.createSecret(envId, dto);
+        return ResponseEntity.ok(response);
     }
 
-    // NEW: Get all secrets and decrypt them for the user
-    @GetMapping
-    public List<Secret> getAllSecrets() {
-        return secretRepository.findAll().stream().map(secret -> {
-            try {
-                String decrypted = encryptionService.decrypt(secret.getSecretValue());
-                secret.setSecretValue(decrypted);
-                return secret;
-            } catch (Exception e) {
-                // If decryption fails, we show the encrypted value or an error
-                secret.setSecretValue("DECRYPTION_ERROR");
-                return secret;
-            }
-        }).collect(Collectors.toList());
+    /**
+     * Lists and decrypts all secrets within an environment on the fly.
+     * Endpoint: GET /api/environments/{envId}/secrets
+     */
+    @GetMapping("/api/environments/{envId}/secrets")
+    public ResponseEntity<List<SecretResponseDTO>> getSecretsByEnvironment(
+            @PathVariable UUID envId) {
+        List<SecretResponseDTO> response = secretService.getSecretsByEnvironment(envId);
+        return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}")
-    public Secret getSecret(@PathVariable UUID id) throws Exception {
-        Secret secret = secretRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Secret not found"));
-
-        // Decrypt before sending to Postman
-        secret.setSecretValue(encryptionService.decrypt(secret.getSecretValue()));
-
-        return secret;
+    /**
+     * Deletes a secret from the database.
+     * Endpoint: DELETE /api/secrets/{secretId}
+     */
+    @DeleteMapping("/api/secrets/{secretId}")
+    public ResponseEntity<Void> deleteSecret(@PathVariable UUID secretId) {
+        secretService.deleteSecret(secretId);
+        return ResponseEntity.noContent().build();
     }
 }
