@@ -48,6 +48,9 @@ public class SecretChangeRequest {
     @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;
 
+    @Column(name = "reason", columnDefinition = "TEXT")
+    private String reason;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -134,5 +137,12 @@ public class SecretChangeRequest {
 
     public void setResolvedAt(LocalDateTime resolvedAt) {
         this.resolvedAt = resolvedAt;
+    }
+    
+    public String getReason() {
+        return reason;
+    }
+    public void setReason(String reason) {
+        this.reason = reason;
     }
 }
