@@ -47,6 +47,16 @@ public class SecretController {
     }
 
     /**
+     * Decrypts and reveals a single secret value on-demand.
+     * Endpoint: GET /api/secrets/{secretId}/reveal
+     */
+    @GetMapping("/api/secrets/{secretId}/reveal")
+    public ResponseEntity<SecretResponseDTO> revealSecret(@PathVariable UUID secretId) {
+        SecretResponseDTO response = secretService.revealSecret(secretId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * Deletes a secret from the database.
      * Endpoint: DELETE /api/secrets/{secretId}
      */
