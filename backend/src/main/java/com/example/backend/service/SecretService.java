@@ -7,6 +7,7 @@ import com.example.backend.entity.Membership;
 import com.example.backend.entity.Secret;
 import com.example.backend.entity.User;
 import com.example.backend.enums.Role;
+import com.example.backend.exception.CustomAccessDeniedException;
 import com.example.backend.repository.EnvironmentRepository;
 import com.example.backend.repository.MembershipRepository;
 import com.example.backend.repository.SecretRepository;
@@ -122,6 +123,36 @@ public class SecretService {
     }
 
     /**
+     * Decrypts and reveals a single specific secret on-demand.
+     * Accessible only to ADMIN roles.
+     */
+    @Transactional(readOnly = true)
+    public SecretResponseDTO revealSecret(UUID secretId) {
+        User currentUser = getCurrentUser();
+        Secret secret = secretRepository.findById(secretId)
+                .orElseThrow(() -> new RuntimeException("Secret not found."));
+
+        // Trace ownership and check ADMIN permission
+        Membership membership = validateEnvironmentAccess(secret.getEnvironment(), currentUser.getId());
+        if (membership.getRole() != Role.ADMIN) {
+            throw new CustomAccessDeniedException("Access Denied: Only Admins are authorized to reveal decrypted secret values.");
+        }
+
+        try {
+            String decryptedVal = encryptionService.decrypt(secret.getSecretValue(), secret.getIv());
+            return new SecretResponseDTO(
+                    secret.getId(),
+                    secret.getSecretKey(),
+                    decryptedVal,
+                    secret.getCreatedAt(),
+                    secret.getUpdatedAt()
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Decryption failure for key: " + secret.getSecretKey(), e);
+        }
+    }
+
+    /**
      * Deletes a secret from the environment database.
      * Enforces Admin-only restriction.
      */
@@ -134,13 +165,11 @@ public class SecretService {
         // Trace ownership and verify Admin permissions
         Membership membership = validateEnvironmentAccess(secret.getEnvironment(), currentUser.getId());
         if (membership.getRole() != Role.ADMIN) {
-            throw new RuntimeException("Access Denied: Only Admins are authorized to delete environment secrets.");
+            throw new CustomAccessDeniedException("Access Denied: Only Admins are authorized to delete environment secrets.");
         }
 
         secretRepository.delete(secret);
     }
-
-    // --- Core Multi-Tenant Helpers ---
 
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -151,6 +180,6 @@ public class SecretService {
     private Membership validateEnvironmentAccess(Environment environment, UUID userId) {
         UUID orgId = environment.getProject().getOrganization().getId();
         return membershipRepository.findByUserIdAndOrganizationId(userId, orgId)
-                .orElseThrow(() -> new RuntimeException("Access Denied: You are not a member of this organization."));
+                .orElseThrow(() -> new CustomAccessDeniedException("Access Denied: You are not a member of this organization."));
     }
 }
