@@ -37,6 +37,15 @@ public ResponseEntity<Map<String, String>> handleDataViolation(DataIntegrityViol
         return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
     }
 
+    // Handles role boundary errors (e.g. MEMBER deleting secrets) → 403 Forbidden
+    @ExceptionHandler(CustomAccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> handleAccessDenied(CustomAccessDeniedException ex) {
+        Map<String, String> errorResponse = new HashMap<>();
+        errorResponse.put("error", "Forbidden");
+        errorResponse.put("message", ex.getMessage());
+        return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
+    }
+
     // Fallback for any other unexpected error → 500 Internal Server Error
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGenericException(Exception ex) {
