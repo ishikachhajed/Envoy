@@ -71,6 +71,7 @@ public class SecretChangeRequestService {
             request.setIv(encrypted.getIv());
             request.setRequester(currentUser);
             request.setStatus(RequestStatus.PENDING);
+            request.setReason(dto.getReason());
 
             SecretChangeRequest saved = changeRequestRepository.save(request);
 
@@ -175,7 +176,8 @@ public class SecretChangeRequestService {
                 request.getStatus(),
                 resolverEmail,
                 request.getCreatedAt(),
-                request.getResolvedAt()
+                request.getResolvedAt(),
+                request.getReason()
         );
     }
 
