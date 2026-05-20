@@ -6,6 +6,7 @@ import com.example.backend.entity.Environment;
 import com.example.backend.entity.Membership;
 import com.example.backend.entity.Secret;
 import com.example.backend.entity.User;
+import com.example.backend.enums.AuditAction;
 import com.example.backend.enums.Role;
 import com.example.backend.exception.CustomAccessDeniedException;
 import com.example.backend.repository.EnvironmentRepository;
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
  * SecretService: Handles tenant isolation context, encryption writes, 
  * and AES-GCM-256 decryption reads for environment secrets.
  * Enforces strict Role-Based Access Control (RBAC) key masking and delete gates.
+ * Seamlessly emits immutable transactional history entries via AuditLogService.
  */
 @Service
 public class SecretService {
@@ -34,17 +36,20 @@ public class SecretService {
     private final MembershipRepository membershipRepository;
     private final UserRepository userRepository;
     private final EncryptionService encryptionService;
+    private final AuditLogService auditLogService;
 
     public SecretService(SecretRepository secretRepository,
                          EnvironmentRepository environmentRepository,
                          MembershipRepository membershipRepository,
                          UserRepository userRepository,
-                         EncryptionService encryptionService) {
+                         EncryptionService encryptionService,
+                         AuditLogService auditLogService) {
         this.secretRepository = secretRepository;
         this.environmentRepository = environmentRepository;
         this.membershipRepository = membershipRepository;
         this.userRepository = userRepository;
         this.encryptionService = encryptionService;
+        this.auditLogService = auditLogService;
     }
 
     /**
@@ -58,6 +63,7 @@ public class SecretService {
 
         // Trace ownership up to Organization level and check membership
         validateEnvironmentAccess(environment, currentUser.getId());
+        UUID orgId = environment.getProject().getOrganization().getId();
 
         try {
             // Encrypt secret value using secure AES-GCM-256
@@ -70,6 +76,14 @@ public class SecretService {
             secret.setEnvironment(environment);
 
             Secret saved = secretRepository.save(secret);
+
+            // SOC2 Audit Trail
+            auditLogService.recordLog(
+                    currentUser.getEmail(),
+                    AuditAction.SECRET_CREATE,
+                    orgId,
+                    "Created secret '" + dto.getKey() + "' in Environment '" + environment.getName() + "' (Project: " + environment.getProject().getName() + ")"
+            );
 
             return new SecretResponseDTO(
                     saved.getId(),
@@ -134,12 +148,23 @@ public class SecretService {
 
         // Trace ownership and check ADMIN permission
         Membership membership = validateEnvironmentAccess(secret.getEnvironment(), currentUser.getId());
+        UUID orgId = secret.getEnvironment().getProject().getOrganization().getId();
+
         if (membership.getRole() != Role.ADMIN) {
             throw new CustomAccessDeniedException("Access Denied: Only Admins are authorized to reveal decrypted secret values.");
         }
 
         try {
             String decryptedVal = encryptionService.decrypt(secret.getSecretValue(), secret.getIv());
+
+            // SOC2 Audit Trail
+            auditLogService.recordLog(
+                    currentUser.getEmail(),
+                    AuditAction.SECRET_REVEAL,
+                    orgId,
+                    "Revealed plain secret value for key '" + secret.getSecretKey() + "' in Environment '" + secret.getEnvironment().getName() + "'"
+            );
+
             return new SecretResponseDTO(
                     secret.getId(),
                     secret.getSecretKey(),
@@ -164,11 +189,21 @@ public class SecretService {
 
         // Trace ownership and verify Admin permissions
         Membership membership = validateEnvironmentAccess(secret.getEnvironment(), currentUser.getId());
+        UUID orgId = secret.getEnvironment().getProject().getOrganization().getId();
+
         if (membership.getRole() != Role.ADMIN) {
             throw new CustomAccessDeniedException("Access Denied: Only Admins are authorized to delete environment secrets.");
         }
 
         secretRepository.delete(secret);
+
+        // SOC2 Audit Trail
+        auditLogService.recordLog(
+                currentUser.getEmail(),
+                AuditAction.SECRET_DELETE,
+                orgId,
+                "Deleted secret '" + secret.getSecretKey() + "' from Environment '" + secret.getEnvironment().getName() + "'"
+        );
     }
 
     private User getCurrentUser() {
