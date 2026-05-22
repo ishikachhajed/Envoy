@@ -8,8 +8,8 @@ import { apiFetch } from "@/lib/api";
 export interface Secret {
   id: string;
   secretKey: string;
-  secretValue: string;
-  createdAt: string;
+  key: string;
+  value: string;
   updatedAt: string;
 }
 export function SkeletonLoader() {
@@ -59,8 +59,8 @@ export function SecretTable({
     // 4. Request decrypted value from the backend
     setIsRevealing((prev) => ({ ...prev, [secretId]: true }));
     try {
-      const response = await apiFetch<{ secretValue: string }>(`/api/secrets/${secretId}/reveal`);
-      setDecryptedValues((prev) => ({ ...prev, [secretId]: response.secretValue }));
+      const response = await apiFetch<{ value: string }>(`/api/secrets/${secretId}/reveal`);
+      setDecryptedValues((prev) => ({ ...prev, [secretId]: response.value }));
       setVisibleSecrets((prev) => ({ ...prev, [secretId]: true }));
       toast.success(`Secret '${secretKey}' decrypted and revealed (logged to SOC2 audit trail).`);
     } catch (err: any) {
@@ -78,9 +78,9 @@ export function SecretTable({
     } else if (userRole === "ADMIN") {
       // If Admin hasn't revealed it yet, reveal on the fly for copying
       try {
-        const response = await apiFetch<{ secretValue: string }>(`/api/secrets/${secretId}/reveal`);
-        textToCopy = response.secretValue;
-        setDecryptedValues((prev) => ({ ...prev, [secretId]: response.secretValue }));
+        const response = await apiFetch<{ value: string }>(`/api/secrets/${secretId}/reveal`);
+        textToCopy = response.value;
+        setDecryptedValues((prev) => ({ ...prev, [secretId]: response.value }));
       } catch (err) {
         console.error("Failed to decrypt for copy:", err);
       }
@@ -131,11 +131,11 @@ export function SecretTable({
             const isVisible = visibleSecrets[secret.id] || false;
             const loading = isRevealing[secret.id] || false;
             const displayValue = isVisible 
-              ? (decryptedValues[secret.id] || secret.secretValue) 
+              ? (decryptedValues[secret.id] || secret.value)  
               : "••••••••••••";
             return (
               <tr key={secret.id} className="hover:bg-white/[0.01] transition-colors group">
-                <td className="px-6 py-4 font-mono font-medium text-white">{secret.secretKey}</td>
+                <td className="px-6 py-4 font-mono font-medium text-white">{secret.key}</td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
                     <span
@@ -147,7 +147,7 @@ export function SecretTable({
                       {displayValue}
                     </span>
                     <button
-                      onClick={() => toggleVisibility(secret.id, secret.secretKey)}
+                      onClick={() => toggleVisibility(secret.id, secret.key)}
                       disabled={loading}
                       className="p-1.5 text-muted-foreground hover:text-white transition-colors rounded-md hover:bg-white/10 ml-2 disabled:opacity-50"
                       title={isVisible ? "Hide value" : "Reveal value"}
@@ -166,7 +166,7 @@ export function SecretTable({
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
                     <button
-                      onClick={() => copyToClipboard(secret.id, secret.secretKey, secret.secretValue)}
+                      onClick={() => copyToClipboard(secret.id, secret.key, secret.value)}
                       className="p-2 text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-primary/10"
                       title="Copy decrypted value"
                     >
