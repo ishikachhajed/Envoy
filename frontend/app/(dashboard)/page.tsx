@@ -126,7 +126,7 @@ export default function DashboardPage() {
       await createOrg(newOrgName);
       setNewOrgName("");
     } catch (err) {
-      console.error(err);
+     
     } finally {
       setIsActionLoading(false);
     }
