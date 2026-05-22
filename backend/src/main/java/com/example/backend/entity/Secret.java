@@ -30,10 +30,12 @@ public class Secret {
     @Column(name = "iv", nullable = false)
     private String iv;
 
-    @Column(name = "created_at", insertable = false, updatable = false)
+    @org.hibernate.annotations.CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     private ZonedDateTime createdAt;
 
-    @Column(name = "updated_at", insertable = false, updatable = false)
+    @org.hibernate.annotations.UpdateTimestamp
+    @Column(name = "updated_at")
     private ZonedDateTime updatedAt;
 
     // Getters and Setters
