@@ -16,7 +16,7 @@ export default function LoginPage() {
     try {
       await login(email, password);
     } catch (err) {
-      console.error(err);
+    
     } finally {
       setIsSubmitting(false);
     }

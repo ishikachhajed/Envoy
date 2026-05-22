@@ -18,7 +18,7 @@ export default function SignupPage() {
     try {
       await signup(name, email, password);
     } catch (err) {
-      console.error(err);
+    
     } finally {
       setIsSubmitting(false);
     }
