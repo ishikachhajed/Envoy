@@ -28,6 +28,10 @@ interface AuthContextType {
   activeOrg: Organization | null;
   userRole: "ADMIN" | "MEMBER" | null;
   isLoading: boolean;
+  // ── OTP Auth (primary flow) ──
+  requestOtp: (email: string) => Promise<void>;
+  verifyOtp: (email: string, otp: string) => Promise<void>;
+  // ── Legacy password auth (kept for compat) ──
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password?: string) => Promise<void>;
   logout: () => void;
@@ -36,6 +40,31 @@ interface AuthContextType {
   refreshOrgs: () => Promise<void>;
 }
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+/**
+ * AuthProvider — What this file does:
+ * ──────────────────────────────────────
+ * This is the global authentication state manager for the entire frontend application.
+ * It wraps the whole app (in layout.tsx) and provides every component with:
+ *   - The current logged-in user and their JWT token
+ *   - The user's organizations and active workspace
+ *   - The user's role (ADMIN or MEMBER) in the active workspace
+ *   - Functions to request OTPs, verify OTPs, and log out
+ *
+ * Why is it needed?
+ * Without this, every page and component would need to independently read from
+ * localStorage, manage token state, and handle redirects. This context centralizes
+ * ALL of that into one place — the "single source of truth" for auth state.
+ *
+ * What happens if this file is missing?
+ * Every page would break — nothing would know if the user is logged in.
+ *
+ * Industry Comparison:
+ * This is equivalent to Supabase's `useSession()` hook, Auth0's `useAuth0()` hook,
+ * or Next-Auth's `SessionProvider`. The pattern is universal in modern React apps.
+ */
+
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -57,17 +86,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const parsedUser = JSON.parse(storedUser) as User;
           setUser(parsedUser);
           
-          // Load organizations and roles
           await loadUserEnvironment(storedToken, parsedUser);
         } else {
           setIsLoading(false);
           // Only redirect to login if we are in a protected page (dashboard)
-          if (!pathname.startsWith("/login") && !pathname.startsWith("/signup")) {
+          const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/signup") || pathname.startsWith("/verify");
+          if (!isAuthPage) {
             router.replace("/login");
           }
         }
       } catch (err) {
-        console.error("Session recovery failed:", err);
         clearAuthData();
         setIsLoading(false);
         router.replace("/login");
@@ -75,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     recoverSession();
   }, []);
-  // Helpers to clear data
+
   const clearAuthData = () => {
     localStorage.removeItem("envoy_token");
     localStorage.removeItem("envoy_user");
@@ -86,18 +114,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setActiveOrg(null);
     setUserRole(null);
   };
-  // Helper to load orgs and compute roles
+
   const loadUserEnvironment = async (authToken: string, currentUser: User) => {
     try {
       const orgs = await apiFetch<Organization[]>("/api/organizations/mine");
       setOrganizations(orgs);
       if (orgs.length > 0) {
-        // Recover active organization ID or pick first
+      
         const savedOrgId = localStorage.getItem("envoy_active_org_id");
-        let active = orgs.find((o) => o.id === savedOrgId) || orgs[0];
+        const active = orgs.find((o) => o.id === savedOrgId) || orgs[0];
         setActiveOrg(active);
         localStorage.setItem("envoy_active_org_id", active.id);
-        // Fetch role inside active organization
         await fetchAndComputeRole(active.id, currentUser.email);
       } else {
         // User has no organizations yet (needs onboarding)
@@ -105,7 +132,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUserRole(null);
         
         // Redirect to onboarding (we will handle onboarding on dashboard root)
-        if (!pathname.startsWith("/login") && !pathname.startsWith("/signup")) {
+        const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/signup") || pathname.startsWith("/verify");
+        if (!isAuthPage) {
           router.replace("/");
         }
       }
@@ -115,22 +143,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }
   };
-  // Helper to fetch members and set userRole
+ 
   const fetchAndComputeRole = async (orgId: string, email: string) => {
     try {
       const members = await apiFetch<Member[]>(`/api/organizations/${orgId}/members`);
       const me = members.find((m) => m.userEmail.toLowerCase() === email.toLowerCase());
-      if (me) {
-        setUserRole(me.role);
-      } else {
-        setUserRole("MEMBER"); // Fallback
-      }
-    } catch (err) {
-      console.error("Failed to compute membership role:", err);
+      setUserRole(me ? me.role : "MEMBER");
+    } catch {
       setUserRole("MEMBER");
     }
   };
-  // 2. Login Flow
+// ── OTP Auth Flow (Primary) ───────────────────────────────────────────────
+  /**
+   * requestOtp — Step 1 of the passwordless flow.
+   *
+   * What it does:
+   * Sends the user's email to the backend. The backend generates a 6-digit code,
+   * hashes it, saves it to the DB, and emails it to the user.
+   *
+   * What happens after?
+   * The Login page transitions from "Enter email" to "Enter OTP" step.
+   *
+   * @param email The email address to send the OTP to
+   */
+  const requestOtp = async (email: string): Promise<void> => {
+    const response = await apiFetch<{ message: string }>("/api/auth/request-otp", {
+      method: "POST",
+      body: JSON.stringify({ email: email.trim().toLowerCase() }),
+    });
+    // Success is handled by the calling component (shows toast, moves to OTP step)
+  };
+  /**
+   * verifyOtp — Step 2 of the passwordless flow.
+   *
+   * What it does:
+   * Sends the email + 6-digit OTP to the backend for verification.
+   * If valid, the backend auto-creates the user (if new) and returns a JWT token.
+   * This context then saves the token, loads the user's organizations, and redirects
+   * to the dashboard.
+   *
+   * @param email The user's email
+   * @param otp   The 6-digit code from their inbox
+   */
+  const verifyOtp = async (email: string, otp: string): Promise<void> => {
+    setIsLoading(true);
+    try {
+      const response = await apiFetch<{ token: string; user: User }>("/api/auth/verify-otp", {
+        method: "POST",
+        body: JSON.stringify({ email: email.trim().toLowerCase(), otp: otp.trim() }),
+      });
+      localStorage.setItem("envoy_token", response.token);
+      localStorage.setItem("envoy_user", JSON.stringify(response.user));
+      setToken(response.token);
+      setUser(response.user);
+      toast.success("Welcome to Envoy Vault! 🎉");
+      await loadUserEnvironment(response.token, response.user);
+      router.push("/");
+    } catch (error: any) {
+      setIsLoading(false);
+      const apiErr = error as ApiError;
+      toast.error(apiErr.message || "Verification failed. Please check your code.");
+      throw error;
+    }
+  };
+ 
+
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
@@ -152,7 +229,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw error;
     }
   };
-  // 3. Signup Flow
+ 
   const signup = async (name: string, email: string, password?: string) => {
     setIsLoading(true);
     try {
@@ -172,17 +249,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       setIsLoading(false);
       const apiErr = error as ApiError;
-      toast.error(apiErr.message || "Signup failed. Account may already exist.");
+      toast.error(apiErr.message || "Signup failed.");
       throw error;
     }
   };
-  // 4. Logout Flow
+  
   const logout = () => {
     clearAuthData();
     toast.info("Logged out successfully.");
     router.replace("/login");
   };
-  // 5. Create Organization
+  
   const createOrg = async (name: string): Promise<Organization> => {
     try {
       const org = await apiFetch<Organization>("/api/organizations", {
@@ -194,9 +271,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setActiveOrg(org);
       localStorage.setItem("envoy_active_org_id", org.id);
       
-      if (user) {
-        await fetchAndComputeRole(org.id, user.email);
-      }
+      if (user) await fetchAndComputeRole(org.id, user.email);
+      
       toast.success(`Organization '${name}' created!`);
       return org;
     } catch (error: any) {
@@ -205,40 +281,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw error;
     }
   };
-  // 6. Select Organization Workspace
+
   const selectOrg = async (orgId: string) => {
     const selected = organizations.find((o) => o.id === orgId);
     if (selected) {
       setIsLoading(true);
       setActiveOrg(selected);
       localStorage.setItem("envoy_active_org_id", orgId);
-      if (user) {
-        await fetchAndComputeRole(orgId, user.email);
-      }
+      if (user) await fetchAndComputeRole(orgId, user.email);
       setIsLoading(false);
       toast.success(`Switched workspace to '${selected.name}'`);
     }
   };
   const refreshOrgs = async () => {
-    if (token && user) {
-      await loadUserEnvironment(token, user);
-    }
+    if (token && user) await loadUserEnvironment(token, user);
   };
   return (
     <AuthContext.Provider
       value={{
-        user,
-        token,
-        organizations,
-        activeOrg,
-        userRole,
-        isLoading,
-        login,
-        signup,
-        logout,
-        createOrg,
-        selectOrg,
-        refreshOrgs,
+        user, token, organizations, activeOrg, userRole, isLoading,
+        requestOtp, verifyOtp,
+        login, signup,
+        logout, createOrg, selectOrg, refreshOrgs,
       }}
     >
       {children}
