@@ -30,7 +30,11 @@ interface AuthContextType {
   isLoading: boolean;
   // ── OTP Auth (primary flow) ──
   requestOtp: (email: string) => Promise<void>;
-  verifyOtp: (email: string, otp: string) => Promise<void>;
+  verifyOtp: (
+  email: string,
+  otp: string,
+  returnUrl?: string | null
+) => Promise<void>;
   // ── Legacy password auth (kept for compat) ──
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password?: string) => Promise<void>;
@@ -185,7 +189,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * @param email The user's email
    * @param otp   The 6-digit code from their inbox
    */
-  const verifyOtp = async (email: string, otp: string): Promise<void> => {
+  const verifyOtp = async (
+  email: string,
+  otp: string,
+  returnUrl?: string | null
+): Promise<void> => {
     setIsLoading(true);
     try {
       const response = await apiFetch<{ token: string; user: User }>("/api/auth/verify-otp", {
@@ -196,8 +204,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("envoy_user", JSON.stringify(response.user));
       setToken(response.token);
       setUser(response.user);
-      toast.success("Welcome to Envoy Vault! 🎉");
+      toast.success("Welcome to Envoy Vault!");
       await loadUserEnvironment(response.token, response.user);
+      if (returnUrl) {
+        router.push(returnUrl);
+      } else {
+        router.push("/");
+      }
       router.push("/");
     } catch (error: any) {
       setIsLoading(false);
