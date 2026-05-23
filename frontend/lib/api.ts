@@ -48,7 +48,11 @@ export async function apiFetch<T>(
       };
       throw error;
     }
-    return await response.json() as T;
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      return await response.json() as T;
+    }
+    return (await response.text()) as unknown as T;
   } catch (error: any) {
     if (error.status) {
       throw error; // Rethrow parsed API error
