@@ -7,7 +7,6 @@ import { useAuth } from "@/lib/AuthContext";
 import { apiFetch } from "@/lib/api";
 export interface Secret {
   id: string;
-  secretKey: string;
   key: string;
   value: string;
   updatedAt: string;
