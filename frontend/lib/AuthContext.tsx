@@ -211,7 +211,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         router.push("/");
       }
-      router.push("/");
     } catch (error: any) {
       setIsLoading(false);
       const apiErr = error as ApiError;
