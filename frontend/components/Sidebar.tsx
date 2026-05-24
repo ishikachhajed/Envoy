@@ -50,6 +50,17 @@ export function Sidebar() {
           <FolderGit2 className="w-4 h-4" />
           Secrets Vault
         </Link>
+        <Link 
+          href="/team" 
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+            pathname === "/team" 
+              ? "bg-primary/10 text-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] border border-primary/20" 
+              : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          Team Members
+        </Link>
         {/* Admin Gated Views */}
         {userRole === "ADMIN" && (
           <>
