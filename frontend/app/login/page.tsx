@@ -4,42 +4,34 @@ import { useAuth } from "@/lib/AuthContext";
 import { Shield, Mail, ArrowRight, RotateCcw, Loader2, CheckCircle2, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
-/**
- * LoginPage — What this file does:
- * ──────────────────────────────────
- * This is the unified authentication page for Envoy Vault.
- * It implements a two-step passwordless login flow:
- *
- * Step 1 — Email Entry:
- *   User types their email address and clicks "Send Verification Code".
- *   The frontend calls POST /api/auth/request-otp.
- *   The backend generates a 6-digit OTP, hashes it, and emails it to the user.
- *
- * Step 2 — OTP Verification:
- *   User sees 6 individual digit input boxes (like Supabase, Linear, Vercel).
- *   They type or paste their code.
- *   A 5-minute countdown timer is shown.
- *   A "Resend Code" button appears after the timer expires.
- *   The frontend calls POST /api/auth/verify-otp.
- *   On success, the JWT is stored in localStorage and user is redirected to dashboard.
- *
- * Why a two-step flow?
- * This is the modern "Magic Link" / "Passwordless" pattern.
- * Users don't need to remember passwords. The email inbox itself proves identity.
- * Used by: Linear, Notion, Supabase, Vercel, Loom, and many others.
- *
- * Why 6 individual boxes instead of a single text input?
- * - Enterprise-grade UX (matches Stripe, GitHub 2FA, Apple ID)
- * - Auto-advance between boxes feels native and fast
- * - Paste support means users can paste all 6 digits at once
- * - Makes the auth moment feel intentional and secure
- */
 
 
 export default function LoginPage() {
   const { requestOtp, verifyOtp, isLoading } = useAuth();
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
+  useEffect(() => {
+    // If we were passed an email from an invite link, auto-fill it and send OTP immediately
+    const searchParams = new URLSearchParams(window.location.search);
+    const prefillEmail = searchParams.get("email");
+    if (prefillEmail && step === "email" && !isSending) {
+      setEmail(prefillEmail);
+      autoRequestOtp(prefillEmail);
+    }
+  }, []);
+  const autoRequestOtp = async (targetEmail: string) => {
+    setIsSending(true);
+    try {
+      await requestOtp(targetEmail.trim());
+      setStep("otp");
+      setOtpDigits(["", "", "", "", "", ""]);
+      setTimeout(() => inputRefs.current[0]?.focus(), 100);
+    } catch (err: any) {
+      setError(err.message || "Failed to send verification code.");
+    } finally {
+      setIsSending(false);
+    }
+  };
   
   // ── OTP State ──
   // 6 individual digit boxes
@@ -110,8 +102,10 @@ export default function LoginPage() {
     setError(null);
     setIsVerifying(true);
     try {
-      await verifyOtp(email, otp);
-      // AuthContext handles redirect after success
+      const searchParams = new URLSearchParams(window.location.search);
+      const returnUrl = searchParams.get("returnUrl");
+      await verifyOtp(email, otp, returnUrl);
+      
     } catch (err: any) {
       setError(err.message || "Invalid or expired code. Please try again.");
       // Clear OTP boxes on error so user can re-type
