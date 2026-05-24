@@ -254,7 +254,7 @@ export default function DashboardPage() {
     );
   }
   // 2. Onboarding: Create Project
-  if (projects.length === 0) {
+  if (!isDataLoading && projects.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#050505] px-4">
         <div className="w-full max-w-md relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
