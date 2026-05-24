@@ -35,9 +35,15 @@ function InviteHandler() {
       router.push(redirectUrl);
       return;
     }
+
+    if (email && user.email.toLowerCase() !== email.toLowerCase()) {
+      setStatus("error");
+      setErrorMessage(`You are logged in as ${user.email}, but this invite is for ${email}. Please log out first.`);
+      return;
+    }
     
     acceptInvitation(token);
-  }, [user, token, router]);
+  }, [user, token, email, router, isLoading]);
   const acceptInvitation = async (inviteToken: string) => {
     try {
       await apiFetch(`/api/organizations/invitations/accept?token=${inviteToken}`, {
