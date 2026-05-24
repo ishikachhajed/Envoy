@@ -22,11 +22,9 @@ import java.util.UUID;
  * Similar to Prisma Client (Node.js), ActiveRecord (Rails), or Eloquent (Laravel).
  */
 public interface OtpVerificationRepository extends JpaRepository<OtpVerification, UUID> {
-    /**
-     * Finds the most recently created OTP for a given email.
-     * Spring auto-generates this SQL:
-     *   SELECT * FROM otp_verifications WHERE email = ? ORDER BY created_at DESC LIMIT 1
-     */
+
+    // SELECT * FROM otp_verifications WHERE email = ? ORDER BY created_at DESC LIMIT 1
+    
     Optional<OtpVerification> findTopByEmailOrderByCreatedAtDesc(String email);
     /**
      * Deletes all OTP records for a given email.
@@ -34,5 +32,7 @@ public interface OtpVerificationRepository extends JpaRepository<OtpVerification
      * The @Transactional annotation ensures this DELETE runs inside a database transaction.
      */
     @Transactional
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("DELETE FROM OtpVerification o WHERE o.email = ?1")
     void deleteByEmail(String email);
 }
