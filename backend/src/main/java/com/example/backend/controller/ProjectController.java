@@ -1,31 +1,28 @@
 package com.example.backend.controller;
 
+import com.example.backend.dto.EnvironmentResponseDTO;
 import com.example.backend.entity.Project;
 import com.example.backend.repository.ProjectRepository;
+import com.example.backend.service.ProjectService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/projects") // This sets the URL for Postman!
+@RequestMapping("/api/projects")
 public class ProjectController {
 
-    private final ProjectRepository projectRepository;
+    private final ProjectService projectService;
 
-    public ProjectController(ProjectRepository projectRepository) {
-        this.projectRepository = projectRepository;
+    public ProjectController(ProjectService projectService) {
+        this.projectService = projectService;
     }
 
-    // POST: Create a new project
-    @PostMapping
-    public Project createProject(@RequestBody Project newProject) {
-        // Saves the new project into PostgreSQL
-        return projectRepository.save(newProject);
-    }
-
-    // GET: Get all projects
-    @GetMapping
-    public List<Project> getAllProjects() {
-        return projectRepository.findAll();
+    @GetMapping("/{id}/environments")
+    public ResponseEntity<List<EnvironmentResponseDTO>> getEnvironments(@PathVariable UUID id) {
+        List<EnvironmentResponseDTO> response = projectService.getEnvironmentsByProject(id);
+        return ResponseEntity.ok(response);
     }
 }
