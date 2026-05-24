@@ -64,8 +64,7 @@ export function SecretTable({
       setVisibleSecrets((prev) => ({ ...prev, [secretId]: true }));
       toast.success(`Secret '${secretKey}' decrypted and revealed (logged to SOC2 audit trail).`);
     } catch (err: any) {
-      console.error(err);
-      toast.error(err.message || "Failed to decrypt secret value.");
+      toast.error(err.message || "Could not reveal secret. Please try again.");
     } finally {
       setIsRevealing((prev) => ({ ...prev, [secretId]: false }));
     }
