@@ -226,13 +226,22 @@ public class OrganizationService {
     public void acceptInvitation(String token) {
         com.example.backend.entity.Invitation invite = invitationRepository.findByToken(token)
             .orElseThrow(() -> new RuntimeException("Invalid or expired invitation token."));
+        User user = getCurrentUser();
+
         if (invite.isAccepted()) {
+            Optional<Membership> existing = membershipRepository.findByUserIdAndOrganizationId(
+                user.getId(), 
+                invite.getOrganization().getId()
+            );
+            if (existing.isPresent()) {
+                return; // Already accepted and user is a member, handle gracefully
+            }
             throw new RuntimeException("Invitation already accepted.");
         }
         if (invite.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("Invitation expired.");
         }
-        User user = getCurrentUser();
+
         if (!user.getEmail().equalsIgnoreCase(invite.getEmail())) {
             throw new RuntimeException("This invitation was sent to a different email address.");
         }
