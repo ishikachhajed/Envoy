@@ -10,11 +10,13 @@ export default function LoginPage() {
   const { requestOtp, verifyOtp, isLoading } = useAuth();
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
+  const hasSentOtpRef = useRef(false);
   useEffect(() => {
     // If we were passed an email from an invite link, auto-fill it and send OTP immediately
     const searchParams = new URLSearchParams(window.location.search);
     const prefillEmail = searchParams.get("email");
-    if (prefillEmail && step === "email" && !isSending) {
+    if (prefillEmail && step === "email" && !hasSentOtpRef.current) {
+      hasSentOtpRef.current = true; // Mark as sent BEFORE the async call to block second fire
       setEmail(prefillEmail);
       autoRequestOtp(prefillEmail);
     }
