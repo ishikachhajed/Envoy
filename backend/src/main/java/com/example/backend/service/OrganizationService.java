@@ -5,14 +5,19 @@ import com.example.backend.entity.Membership;
 import com.example.backend.entity.Organization;
 import com.example.backend.entity.User;
 import com.example.backend.enums.Role;
+import com.example.backend.repository.InvitationRepository;
 import com.example.backend.repository.MembershipRepository;
 import com.example.backend.repository.OrganizationRepository;
 import com.example.backend.repository.UserRepository;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
 /**
@@ -24,13 +29,19 @@ public class OrganizationService {
     private final OrganizationRepository organizationRepository;
     private final MembershipRepository membershipRepository;
     private final UserRepository userRepository;
+    private final com.example.backend.repository.InvitationRepository invitationRepository;
+    private final EmailService emailService;
 
     public OrganizationService(OrganizationRepository organizationRepository,
             MembershipRepository membershipRepository,
-            UserRepository userRepository) {
+             UserRepository userRepository,
+            com.example.backend.repository.InvitationRepository invitationRepository,
+            EmailService emailService) {
         this.organizationRepository = organizationRepository;
         this.membershipRepository = membershipRepository;
         this.userRepository = userRepository;
+        this.invitationRepository = invitationRepository;
+        this.emailService = emailService;
     }
 
     /**
@@ -82,9 +93,7 @@ public class OrganizationService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Adds a new user to a team. Only team ADMINs can call this.
-     */
+     //Invites a new user to a team. Only team ADMINs can call this.
     @Transactional
     public void addMember(UUID orgId, AddMemberRequestDTO request) {
         User requester = getCurrentUser();
@@ -94,18 +103,32 @@ public class OrganizationService {
                 .orElseThrow(() -> new RuntimeException("You are not a member of this organization."));
 
         if (requesterMembership.getRole() != Role.ADMIN) {
-            throw new RuntimeException("Only Admins can add members.");
+            throw new RuntimeException("Only Admins can invite members.");
         }
 
-        // 2. Add Member
-        User targetUser = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found: " + request.getEmail()));
+        /// 2. Check if already a member
+        Optional<User> targetUserOpt = userRepository.findByEmail(request.getEmail());
+        if (targetUserOpt.isPresent()) {
+            Optional<Membership> existing = membershipRepository.findByUserIdAndOrganizationId(targetUserOpt.get().getId(), orgId);
+            if (existing.isPresent()) {
+                throw new RuntimeException("User is already a member of this organization.");
+            }
+        }
 
-        Membership newMembership = new Membership();
-        newMembership.setUser(targetUser);
-        newMembership.setOrganization(requesterMembership.getOrganization());
-        newMembership.setRole(request.getRole());
-        membershipRepository.save(newMembership);
+        // 3. Create or update pending invite
+        Organization org = requesterMembership.getOrganization();
+        com.example.backend.entity.Invitation invite = invitationRepository
+            .findByEmailAndOrganizationIdAndAcceptedFalse(request.getEmail(), orgId)
+            .orElse(new com.example.backend.entity.Invitation());
+        invite.setEmail(request.getEmail());
+        invite.setOrganization(org);
+        invite.setRole(request.getRole());
+        invite.setToken(UUID.randomUUID().toString());
+        invite.setExpiresAt(LocalDateTime.now().plusDays(7));
+        invitationRepository.save(invite);
+        // 4. Send email
+        String inviteUrl = "http://localhost:3000/invite?token=" + invite.getToken() + "&email=" + request.getEmail();
+        emailService.sendOrganizationInviteEmail(request.getEmail(), org.getName(), inviteUrl);
     }
 
     /**
@@ -123,5 +146,116 @@ public class OrganizationService {
                         m.getRole(),
                         m.getJoinedAt()))
                 .collect(Collectors.toList());
+    }
+    /**
+     * Changes a member's role. Only team ADMINs can call this.
+     */
+    @Transactional
+    public void changeMemberRole(UUID orgId, UUID memberId, Role newRole) {
+        User requester = getCurrentUser();
+        Membership requesterMembership = membershipRepository.findByUserIdAndOrganizationId(requester.getId(), orgId)
+                .orElseThrow(() -> new RuntimeException("You are not a member of this organization."));
+        if (requesterMembership.getRole() != Role.ADMIN) {
+            throw new RuntimeException("Only Admins can change roles.");
+        }
+        Membership targetMembership = membershipRepository.findById(memberId)
+                .orElseThrow(() -> new RuntimeException("Membership not found."));
+                
+        if (!targetMembership.getOrganization().getId().equals(orgId)) {
+            throw new RuntimeException("Membership does not belong to this organization.");
+        }
+        // Prevent admin from demoting themselves if they are the only admin
+        if (targetMembership.getUser().getId().equals(requester.getId()) && newRole != Role.ADMIN) {
+            long adminCount = membershipRepository.findByOrganizationId(orgId).stream()
+                .filter(m -> m.getRole() == Role.ADMIN)
+                .count();
+            if (adminCount <= 1) {
+                throw new RuntimeException("Cannot demote the only admin of the organization.");
+            }
+        }
+        targetMembership.setRole(newRole);
+        membershipRepository.save(targetMembership);
+    }
+    /**
+     * Removes a member from the team. Only team ADMINs can call this.
+     */
+    @Transactional
+    public void removeMember(UUID orgId, UUID memberId) {
+        User requester = getCurrentUser();
+        Membership requesterMembership = membershipRepository.findByUserIdAndOrganizationId(requester.getId(), orgId)
+                .orElseThrow(() -> new RuntimeException("You are not a member of this organization."));
+        if (requesterMembership.getRole() != Role.ADMIN) {
+            throw new RuntimeException("Only Admins can remove members.");
+        }
+        Membership targetMembership = membershipRepository.findById(memberId)
+                .orElseThrow(() -> new RuntimeException("Membership not found."));
+                
+        if (!targetMembership.getOrganization().getId().equals(orgId)) {
+            throw new RuntimeException("Membership does not belong to this organization.");
+        }
+        // Prevent admin from removing themselves if they are the only admin
+        if (targetMembership.getUser().getId().equals(requester.getId())) {
+            long adminCount = membershipRepository.findByOrganizationId(orgId).stream()
+                .filter(m -> m.getRole() == Role.ADMIN)
+                .count();
+            if (adminCount <= 1) {
+                throw new RuntimeException("Cannot remove the only admin of the organization.");
+            }
+        }
+        membershipRepository.delete(targetMembership);
+    }
+    /**
+     * Get pending invitations for the team.
+     */
+    @Transactional(readOnly = true)
+    public List<InvitationResponseDTO> getPendingInvitations(UUID orgId) {
+        return invitationRepository.findByOrganizationIdAndAcceptedFalse(orgId)
+            .stream()
+            .map(inv -> new InvitationResponseDTO(
+                inv.getId(),
+                inv.getEmail(),
+                inv.getRole(),
+                inv.getExpiresAt(),
+                inv.getCreatedAt()
+            ))
+            .collect(Collectors.toList());
+    }
+    /**
+     * Accepts an invitation.
+     */
+    @Transactional
+    public void acceptInvitation(String token) {
+        com.example.backend.entity.Invitation invite = invitationRepository.findByToken(token)
+            .orElseThrow(() -> new RuntimeException("Invalid or expired invitation token."));
+        if (invite.isAccepted()) {
+            throw new RuntimeException("Invitation already accepted.");
+        }
+        if (invite.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Invitation expired.");
+        }
+        User user = getCurrentUser();
+        if (!user.getEmail().equalsIgnoreCase(invite.getEmail())) {
+            throw new RuntimeException("This invitation was sent to a different email address.");
+        }
+        // Check if already a member (handles React Strict Mode double-firing)
+        Optional<Membership> existing = membershipRepository.findByUserIdAndOrganizationId(
+            user.getId(), 
+            invite.getOrganization().getId()
+        );
+        if (existing.isEmpty()) {
+            // Add member
+            Membership newMembership = new Membership();
+            newMembership.setUser(user);
+            newMembership.setOrganization(invite.getOrganization());
+            newMembership.setRole(invite.getRole());
+            try {
+                membershipRepository.save(newMembership);
+            } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                // Ignore if another thread just inserted it
+            }
+        }
+        // Mark accepted
+        invite.setAccepted(true);
+        invitationRepository.save(invite);
     }
 }
