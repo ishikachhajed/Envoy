@@ -1,7 +1,11 @@
 const BASE_URL = "http://localhost:8080";
-export interface ApiError {
-  message: string;
+  export class ApiError extends Error {
   status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
 }
 export async function apiFetch<T>(
   path: string,
@@ -35,18 +39,16 @@ export async function apiFetch<T>(
     }
     if (!response.ok) {
       let errorMessage = "An error occurred during the request.";
+      const textResponse = await response.text();
       try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorData.error || errorMessage;
+        if (textResponse) {
+          const errorData = JSON.parse(textResponse);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        }
       } catch {
-        errorMessage = await response.text() || errorMessage;
+         errorMessage = textResponse || errorMessage;
       }
-      
-      const error: ApiError = {
-        message: errorMessage,
-        status: response.status,
-      };
-      throw error;
+      throw new ApiError(errorMessage, response.status);
     }
     const contentType = response.headers.get("content-type");
     if (contentType && contentType.includes("application/json")) {
@@ -58,10 +60,6 @@ export async function apiFetch<T>(
       throw error; // Rethrow parsed API error
     }
     // Network / unexpected error
-    const networkError: ApiError = {
-      message: error.message || "Network request failed. Ensure backend is running.",
-      status: 500,
-    };
-    throw networkError;
+    throw new ApiError(error.message || "Network request failed. Ensure backend is running.", 500);
   }
 }
