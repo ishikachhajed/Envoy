@@ -143,6 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err) {
       console.error("Failed to load user environment:", err);
+      throw err;
     } finally {
       setIsLoading(false);
     }
