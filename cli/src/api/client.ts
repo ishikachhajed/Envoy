@@ -1,0 +1,20 @@
+import axios from 'axios';
+import { loadConfig } from '../storage/configStore.js';
+import { DEFAULT_BACKEND_URL } from '../utils/constants.js';
+export const getApiClient = () => {
+  const config = loadConfig();
+  const baseURL = config.backendUrl || DEFAULT_BACKEND_URL;
+  const client = axios.create({
+    baseURL,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+  if (config.token) {
+    client.interceptors.request.use((req) => {
+      req.headers.Authorization = `Bearer ${config.token}`;
+      return req;
+    });
+  }
+  return client;
+};
