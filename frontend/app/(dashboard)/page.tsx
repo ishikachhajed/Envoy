@@ -308,17 +308,17 @@ export default function DashboardPage() {
   // Active elements
   const currentEnvName = (activeEnv?.name || "Development") as "Development" | "Staging" | "Production";
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <header className="flex justify-between items-end">
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-3xl font-bold tracking-tight text-white">Environment Variables</h1>
-            <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Environment Variables</h1>
+            <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full text-xs text-muted-foreground whitespace-nowrap">
               <span className={`w-2 h-2 rounded-full ${userRole === "ADMIN" ? "bg-emerald-500 shadow-[0_0_8px_#10b981]" : "bg-blue-400"}`} />
               {userRole}
             </div>
           </div>
-          <p className="text-muted-foreground">Manage your secure environment variables and secrets.</p>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage your secure environment variables and secrets.</p>
         </div>
         
         <button
@@ -330,12 +330,14 @@ export default function DashboardPage() {
         </button>
       </header>
       {/* Workspace Selector Bar */}
-      <div className="flex justify-between items-center bg-black/20 p-2.5 rounded-xl backdrop-blur-sm border border-white/5">
-        <EnvironmentSwitcher activeEnv={currentEnvName} onEnvChange={handleEnvChange} />
+      <div className="flex flex-col sm:flex-row justify-between items-center bg-black/20 p-2.5 rounded-xl backdrop-blur-sm border border-white/5 gap-3 w-full">
+        <div className="w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+          <EnvironmentSwitcher activeEnv={currentEnvName} onEnvChange={handleEnvChange} />
+        </div>
         
         {/* Project Selector dropdown */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground px-4">
-          Project: 
+        <div className="flex items-center justify-between sm:justify-end gap-2 text-sm text-muted-foreground px-2 sm:px-4 w-full sm:w-auto border-t sm:border-t-0 border-white/5 pt-2 sm:pt-0">
+          <span>Project:</span>
           <select 
             value={activeProject?.id || ""} 
             onChange={(e) => {

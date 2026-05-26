@@ -115,77 +115,79 @@ export function SecretTable({
   }
   return (
     <div className="w-full glass-panel overflow-hidden border border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
-      <table className="w-full text-sm text-left">
-        <thead className="text-xs uppercase bg-black/40 text-muted-foreground sticky top-0">
-          <tr>
-            <th className="px-6 py-4 font-medium">Key</th>
-            <th className="px-6 py-4 font-medium">Value</th>
-            <th className="px-6 py-4 font-medium">Last Updated</th>
-            <th className="px-6 py-4 font-medium text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-white/5">
-          {secrets.map((secret) => {
-            const isVisible = visibleSecrets[secret.id] || false;
-            const loading = isRevealing[secret.id] || false;
-            const displayValue = isVisible 
-              ? (decryptedValues[secret.id] || secret.value)  
-              : "••••••••••••";
-            return (
-              <tr key={secret.id} className="hover:bg-white/[0.01] transition-colors group">
-                <td className="px-6 py-4 font-mono font-medium text-white">{secret.key}</td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "font-mono transition-all duration-200",
-                        isVisible ? "text-emerald-400 font-semibold" : "text-muted-foreground tracking-widest blur-[1px] select-none text-[11px]"
-                      )}
-                    >
-                      {displayValue}
-                    </span>
-                    <button
-                      onClick={() => toggleVisibility(secret.id, secret.key)}
-                      disabled={loading}
-                      className="p-1.5 text-muted-foreground hover:text-white transition-colors rounded-md hover:bg-white/10 ml-2 disabled:opacity-50"
-                      title={isVisible ? "Hide value" : "Reveal value"}
-                    >
-                      {loading ? (
-                        <span className="w-4 h-4 block border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                      ) : isVisible ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-muted-foreground text-xs">{formatDate(secret.updatedAt)}</td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
-                    <button
-                      onClick={() => copyToClipboard(secret.id, secret.key, secret.value)}
-                      className="p-2 text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-primary/10"
-                      title="Copy decrypted value"
-                    >
-                      <Copy className="w-4 h-4" />
-                    </button>
-                    {userRole === "ADMIN" && (
-                      <button
-                        onClick={() => onDelete(secret.id)}
-                        className="p-2 text-muted-foreground hover:text-red-400 transition-colors rounded-md hover:bg-red-400/10"
-                        title="Delete secret"
+      <div className="overflow-x-auto w-full">
+        <table className="w-full text-sm text-left">
+          <thead className="text-xs uppercase bg-black/40 text-muted-foreground sticky top-0">
+            <tr>
+              <th className="px-6 py-4 font-medium">Key</th>
+              <th className="px-6 py-4 font-medium">Value</th>
+              <th className="px-6 py-4 font-medium">Last Updated</th>
+              <th className="px-6 py-4 font-medium text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {secrets.map((secret) => {
+              const isVisible = visibleSecrets[secret.id] || false;
+              const loading = isRevealing[secret.id] || false;
+              const displayValue = isVisible 
+                ? (decryptedValues[secret.id] || secret.value)  
+                : "••••••••••••";
+              return (
+                <tr key={secret.id} className="hover:bg-white/[0.01] transition-colors group">
+                  <td className="px-6 py-4 font-mono font-medium text-white">{secret.key}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          "font-mono transition-all duration-200",
+                          isVisible ? "text-emerald-400 font-semibold" : "text-muted-foreground tracking-widest blur-[1px] select-none text-[11px]"
+                        )}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        {displayValue}
+                      </span>
+                      <button
+                        onClick={() => toggleVisibility(secret.id, secret.key)}
+                        disabled={loading}
+                        className="p-1.5 text-muted-foreground hover:text-white transition-colors rounded-md hover:bg-white/10 ml-2 disabled:opacity-50"
+                        title={isVisible ? "Hide value" : "Reveal value"}
+                      >
+                        {loading ? (
+                          <span className="w-4 h-4 block border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                        ) : isVisible ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
                       </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-muted-foreground text-xs">{formatDate(secret.updatedAt)}</td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
+                      <button
+                        onClick={() => copyToClipboard(secret.id, secret.key, secret.value)}
+                        className="p-2 text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-primary/10"
+                        title="Copy decrypted value"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                      {userRole === "ADMIN" && (
+                        <button
+                          onClick={() => onDelete(secret.id)}
+                          className="p-2 text-muted-foreground hover:text-red-400 transition-colors rounded-md hover:bg-red-400/10"
+                          title="Delete secret"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

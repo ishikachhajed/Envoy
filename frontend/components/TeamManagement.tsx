@@ -124,17 +124,17 @@ export function TeamManagement() {
           </div>
           <div className="divide-y divide-white/5">
             {invitations.map(inv => (
-              <div key={inv.id} className="flex items-center justify-between p-4 hover:bg-white/[0.01] transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+              <div key={inv.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-4 hover:bg-white/[0.01] transition-colors">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <div className="w-8 h-8 rounded-full flex-shrink-0 bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
                     {inv.email.charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-white">{inv.email}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-white truncate">{inv.email}</p>
                     <p className="text-xs text-muted-foreground">Invited as {inv.role}</p>
                   </div>
                 </div>
-                <div className="text-xs text-muted-foreground px-3 py-1 bg-white/5 rounded-md border border-white/10">
+                <div className="text-xs text-muted-foreground px-3 py-1 bg-white/5 rounded-md border border-white/10 self-start sm:self-auto w-fit">
                   Pending
                 </div>
               </div>
@@ -160,23 +160,23 @@ export function TeamManagement() {
         </div>
         <div className="divide-y divide-white/5">
           {members.map(member => (
-            <div key={member.membershipId} className="flex items-center justify-between p-4 hover:bg-white/[0.01] transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shadow-[inset_0_0_10px_rgba(16,185,129,0.2)]">
+            <div key={member.membershipId} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-4 hover:bg-white/[0.01] transition-colors">
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="w-10 h-10 rounded-full flex-shrink-0 bg-primary/10 flex items-center justify-center text-primary font-bold shadow-[inset_0_0_10px_rgba(16,185,129,0.2)]">
                   {member.userName.charAt(0).toUpperCase()}
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-white flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-white flex items-center gap-2 truncate">
                     {member.userName}
                     {member.userEmail === user?.email && (
-                      <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">You</span>
+                      <span className="text-[10px] bg-primary/20 flex-shrink-0 text-primary px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">You</span>
                     )}
                   </p>
-                  <p className="text-xs text-muted-foreground">{member.userEmail}</p>
+                  <p className="text-xs text-muted-foreground truncate">{member.userEmail}</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-3 mt-2 sm:mt-0">
                 {/* Role Selector (Disabled if not admin, or if it's the user themselves) */}
                 <div className="relative group">
                   <select

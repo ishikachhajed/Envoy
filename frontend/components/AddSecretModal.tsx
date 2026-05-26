@@ -28,7 +28,7 @@ export function AddSecretModal({ isOpen, onClose, activeEnv, onAdd }: AddSecretM
   const isMember = userRole !== "ADMIN";
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="glass-panel w-full max-w-md p-6 border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] animate-in zoom-in-95 duration-200 bg-[#0c0c0c]">
+      <div className="glass-panel w-full max-w-md p-6 mx-4 border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] animate-in zoom-in-95 duration-200 bg-[#0c0c0c] max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h2 className="text-xl font-bold tracking-tight text-white">
