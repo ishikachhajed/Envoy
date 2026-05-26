@@ -13,7 +13,7 @@ memberCommand
       const orgId = await ensureOrganization();
       logger.info('Fetching members...');
       const members = await listMembers(orgId);
-    
+    console.log(JSON.stringify(members, null, 2));
       
       if (members.length === 0) {
         logger.warn('No members found in this organization.');
@@ -77,8 +77,8 @@ memberCommand
         {
           type: 'text',
           name: 'userId',
-          message: 'Enter the user ID of the member:',
-          validate: (value: string) => (value.trim().length > 0 ? true : 'User ID cannot be empty'),
+          message: 'Enter the membership ID of the member:',
+          validate: (value: string) => (value.trim().length > 0 ? true : 'Membership ID cannot be empty'),
         },
         {
           type: 'select',

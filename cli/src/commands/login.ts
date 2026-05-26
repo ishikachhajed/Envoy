@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import prompts from 'prompts';
 import { requestOtp, verifyOtp } from '../services/authService.js';
-import { saveConfig } from '../storage/configStore.js';
+import { saveConfig, clearConfig } from '../storage/configStore.js';
 import { logger } from '../utils/logger.js';
 export const loginCommand = new Command('login')
   .description('Login to Envoy Vault using your email address')
@@ -32,6 +32,7 @@ export const loginCommand = new Command('login')
       }
       logger.info('Verifying OTP...');
       const token = await verifyOtp(email, otp);
+      clearConfig(); 
       saveConfig({ token });
       logger.success('Successfully logged in! Token saved locally.');
     } catch (error: any) {

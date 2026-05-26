@@ -5,6 +5,7 @@ import { loginCommand } from './commands/login.js';
 import { orgCommand } from './commands/organization.js';
 import { projectCommand } from './commands/project.js';
 import { memberCommand } from './commands/member.js';
+import { secretCommand } from './commands/secret.js';
 
 const program = new Command();
 
@@ -18,6 +19,7 @@ program.addCommand(logoutCommand);
 program.addCommand(orgCommand);
 program.addCommand(projectCommand);
 program.addCommand(memberCommand);
+program.addCommand(secretCommand);
 
 if (!process.argv.slice(2).length) {
   program.outputHelp();
