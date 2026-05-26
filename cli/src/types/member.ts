@@ -1,6 +1,7 @@
 export interface Member {
-  userId: string;
-  email?: string;
+  membershipId: string;
+  userName: string;
+  userEmail: string;
   role: string;
-  joinedAt?: string;
+  joinedAt: string | null;
 }

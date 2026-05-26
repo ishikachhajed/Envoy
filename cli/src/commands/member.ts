@@ -13,6 +13,7 @@ memberCommand
       const orgId = await ensureOrganization();
       logger.info('Fetching members...');
       const members = await listMembers(orgId);
+    
       
       if (members.length === 0) {
         logger.warn('No members found in this organization.');
@@ -20,8 +21,9 @@ memberCommand
       }
       logger.success('Members:');
       members.forEach((member, index) => {
-        const emailStr = member.email ? ` (${member.email})` : '';
-        console.log(`  ${index + 1}. [${member.role.toUpperCase()}] UserID: ${member.userId}${emailStr}`);
+        console.log(
+  `  ${index + 1}. [${member.role.toUpperCase()}] ${member.userName} (${member.userEmail})`
+);
       });
     } catch (error) {
       logger.error('Failed to fetch members', error);
