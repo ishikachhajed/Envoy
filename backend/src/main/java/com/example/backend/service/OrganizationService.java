@@ -138,13 +138,14 @@ public class OrganizationService {
         List<Membership> memberships = membershipRepository.findByOrganizationId(orgId);
 
         return memberships.stream()
-                .map(m -> new MemberResponseDTO(
-                        m.getId(),
-                        m.getUser().getName(),
-                        m.getUser().getEmail(),
-                        m.getRole(),
-                        m.getJoinedAt()))
-                .collect(Collectors.toList());
+    .map(m -> new MemberResponseDTO(
+        m.getId(),                // membershipId
+        m.getUser().getId(),      // userId  <-- ADD THIS
+        m.getUser().getName(),
+        m.getUser().getEmail(),
+        m.getRole(),
+        m.getJoinedAt()))
+    .collect(Collectors.toList());
     }
     /**
      * Changes a member's role. Only team ADMINs can call this.
