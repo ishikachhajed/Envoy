@@ -34,8 +34,12 @@ export const loginCommand = new Command('login')
       const token = await verifyOtp(email, otp);
       saveConfig({ token });
       logger.success('Successfully logged in! Token saved locally.');
-    } catch (error) {
-      logger.error('Login failed', error);
-      process.exit(1);
-    }
+    } catch (error: any) {
+  logger.error('Login failed');
+
+  console.log('MESSAGE:', error.message);
+  console.log('CODE:', error.code);
+  console.log('STATUS:', error.response?.status);
+  console.log('DATA:', error.response?.data);
+}
   });
