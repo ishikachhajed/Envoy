@@ -62,8 +62,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Allows Next.js (3000) to talk to Spring (8080)
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000")); 
+        // Allows Next.js (3000) and Vercel deployed frontend to talk to Spring (8080)
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "https://envoy-vault-frontend.vercel.app")); 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true); // Important for cookies/auth headers
