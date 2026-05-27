@@ -7,7 +7,7 @@
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 </div>
 
----
+<hr/>
 
 ## 🔒 What is Envoy Vault?
 
@@ -15,7 +15,7 @@ Stop sending `.env` files over Slack, Discord, or email. Envoy Vault is a modern
 
 This is the command-line interface (CLI) for Envoy Vault, allowing you to pull and inject secrets instantly.
 
----
+<hr/>
 
 ## 🚀 Installation
 
@@ -27,7 +27,7 @@ npm install -g envoy-vault-cli
 
 *(Note: Requires Node.js 18 or higher)*
 
----
+<hr/>
 
 ## 💻 CLI Usage
 
