@@ -1,40 +1,67 @@
 package com.example.backend.service;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+
 import org.springframework.stereotype.Service;
-import jakarta.mail.internet.MimeMessage;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
 @Service
 public class EmailService {
-    private final JavaMailSender mailSender;
-    @Value("${spring.mail.username}")
-    private String senderEmail;
-    public EmailService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
-    }
-    /**
-     * Sends a professional HTML OTP email to the given address.
-     *
-     * @param toEmail The recipient's email address
-     * @param otp     The plain-text 6-digit OTP (we hash it BEFORE storing in DB)
-     */
+
+    // Your Resend API Key
+    private final String RESEND_API_KEY = "re_Ada6E4oZ_NKyRzHKpFGqFj8DjZME3KyFC";
+    
+    // For Resend free accounts, you MUST send from onboarding@resend.dev
+    private final String SENDER_EMAIL = "onboarding@resend.dev";
+
+    private final HttpClient httpClient = HttpClient.newHttpClient();
+
     public void sendOtpEmail(String toEmail, String otp) {
+        String subject = "🔐 Your Envoy Vault Access Code: " + otp;
+        String html = buildOtpEmailHtml(toEmail, otp);
+        sendViaResend(toEmail, subject, html);
+    }
+    
+    public void sendOrganizationInviteEmail(String toEmail, String orgName, String inviteUrl) {
+        String subject = "You've been invited to join " + orgName + " on Envoy Vault";
+        String html = buildInviteEmailHtml(toEmail, orgName, inviteUrl);
+        sendViaResend(toEmail, subject, html);
+    }
+
+    private void sendViaResend(String toEmail, String subject, String html) {
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            // MimeMessageHelper allows us to set HTML content and UTF-8 encoding
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(senderEmail, "Envoy Vault Security");
-            helper.setTo(toEmail);
-            helper.setSubject("🔐 Your Envoy Vault Access Code: " + otp);
-            helper.setText(buildOtpEmailHtml(toEmail, otp), true); // true = send as HTML
-            mailSender.send(message);
+            // Escape the HTML for JSON insertion
+            String escapedHtml = html.replace("\\", "\\\\")
+                                     .replace("\"", "\\\"")
+                                     .replace("\n", "\\n")
+                                     .replace("\r", "");
+                                     
+            String jsonPayload = "{"
+                    + "\"from\": \"" + SENDER_EMAIL + "\","
+                    + "\"to\": \"" + toEmail + "\","
+                    + "\"subject\": \"" + subject + "\","
+                    + "\"html\": \"" + escapedHtml + "\""
+                    + "}";
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.resend.com/emails"))
+                    .header("Authorization", "Bearer " + RESEND_API_KEY)
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() >= 300) {
+                throw new RuntimeException("Resend API failed: " + response.body());
+            }
         } catch (Exception e) {
-            // Wrapping the checked exception so calling services don't need to handle it
-            throw new RuntimeException("Failed to send verification email. Please try again. Error: " + e.getMessage());
+            throw new RuntimeException("Failed to send email via Resend. Error: " + e.getMessage());
         }
     }
-   
+
     private String buildOtpEmailHtml(String toEmail, String otp) {
         // Split OTP into individual digits for the spaced-out display
         String[] digits = otp.split("");
@@ -94,19 +121,7 @@ public class EmailService {
             "</table>" +
             "</body></html>";
     }
-    public void sendOrganizationInviteEmail(String toEmail, String orgName, String inviteUrl) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(senderEmail, "Envoy Vault");
-            helper.setTo(toEmail);
-            helper.setSubject("You've been invited to join " + orgName + " on Envoy Vault");
-            helper.setText(buildInviteEmailHtml(toEmail, orgName, inviteUrl), true);
-            mailSender.send(message);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to send invite email. Error: " + e.getMessage());
-        }
-    }
+
     private String buildInviteEmailHtml(String toEmail, String orgName, String inviteUrl) {
         return "<!DOCTYPE html>" +
             "<html lang='en'>" +
