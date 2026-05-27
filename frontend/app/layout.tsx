@@ -17,6 +17,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Envoy Vault",
   description: "Secure Environment Variable Vault",
+  icons: {
+    icon: "https://api.iconify.design/material-symbols/lock.svg?color=%2310b981", // Beautiful Green Lock
+  },
 };
 
 export default function RootLayout({
