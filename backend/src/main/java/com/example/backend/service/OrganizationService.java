@@ -31,6 +31,9 @@ public class OrganizationService {
     private final com.example.backend.repository.InvitationRepository invitationRepository;
     private final EmailService emailService;
 
+    @org.springframework.beans.factory.annotation.Value("${FRONTEND_URL:http://localhost:3000}")
+    private String frontendUrl;
+
     public OrganizationService(OrganizationRepository organizationRepository,
             MembershipRepository membershipRepository,
              UserRepository userRepository,
@@ -126,7 +129,7 @@ public class OrganizationService {
         invite.setExpiresAt(LocalDateTime.now().plusDays(7));
         invitationRepository.save(invite);
         // 4. Send email
-        String inviteUrl = "http://localhost:3000/invite?token=" + invite.getToken() + "&email=" + request.getEmail();
+        String inviteUrl = frontendUrl + "/invite?token=" + invite.getToken() + "&email=" + request.getEmail();
         emailService.sendOrganizationInviteEmail(request.getEmail(), org.getName(), inviteUrl);
     }
 
