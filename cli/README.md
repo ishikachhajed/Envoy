@@ -1,13 +1,19 @@
+<div align="center">
+  <img src="https://api.iconify.design/material-symbols/lock.svg?color=%2310b981" alt="Envoy Vault Logo" width="100"/>
+  <h1>Envoy Vault CLI</h1>
+  <p><strong>Secure, seamless, and centralized environment variable management for modern teams.</strong></p>
+
+  [![NPM Version](https://img.shields.io/npm/v/envoy-vault-cli.svg?style=flat-square&color=10b981)](https://www.npmjs.com/package/envoy-vault-cli)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+</div>
+
 ---
 
 ## 🔒 What is Envoy Vault?
 
 Stop sending `.env` files over Slack, Discord, or email. Envoy Vault is a modern secrets manager that allows you to securely store, manage, and inject environment variables directly into your applications across your entire team.
 
-It consists of three parts:
-1. **The Web Dashboard**: Manage your teams, projects, and secrets in a beautiful web interface.
-2. **The API**: A highly secure, encrypted backend.
-3. **The CLI**: A developer-friendly command-line tool to pull and inject secrets instantly.
+This is the command-line interface (CLI) for Envoy Vault, allowing you to pull and inject secrets instantly.
 
 ---
 
@@ -54,29 +60,3 @@ Inject secrets directly into a running process in memory without ever writing th
 ```bash
 envoy run -- npm run dev
 ```
-
----
-
-## 🛡️ Security
-Envoy Vault takes security incredibly seriously:
-- **AES-256 Encryption**: All secrets are encrypted before being stored in the database.
-- **No Passwords**: We use secure, time-sensitive Email OTPs (One Time Passwords) for authentication.
-- **JWT Authorization**: Every API request is verified with short-lived JSON Web Tokens.
-
----
-
-## 🛠️ Tech Stack
-- **Frontend**: Next.js 15, React, TailwindCSS, Framer Motion
-- **Backend**: Spring Boot (Java), Hibernate, PostgreSQL, Brevo (SMTP)
-- **CLI**: Node.js, Commander.js, TypeScript
-
----
-
-## 🤝 Contributing
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request

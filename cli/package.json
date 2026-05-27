@@ -1,7 +1,7 @@
 {
-  "name": "cli",
+  "name": "envoy-vault-cli",
   "version": "1.0.0",
-  "description": "",
+  "description": "The official CLI for Envoy Vault - secure environment variable management",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
