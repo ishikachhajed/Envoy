@@ -7,7 +7,7 @@ import { Shield, Loader2, CheckCircle2, XCircle } from "lucide-react";
 function InviteHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, refreshOrgs, isLoading } = useAuth();
+  const { user, refreshOrgs, isLoading, logout } = useAuth();
   
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
@@ -92,12 +92,25 @@ function InviteHandler() {
             <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <p className="text-white font-medium mb-2">Invitation Failed</p>
             <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded-lg border border-red-500/20">{errorMessage}</p>
-            <button 
-              onClick={() => router.push("/")}
-              className="mt-6 bg-white/5 hover:bg-white/10 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-all w-full"
-            >
-              Go to Dashboard
-            </button>
+            
+            {errorMessage.includes("log out first") ? (
+              <button 
+                onClick={() => {
+                  logout();
+                  router.push(`/login?returnUrl=/invite?token=${token}&email=${encodeURIComponent(email || "")}`);
+                }}
+                className="mt-6 bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2.5 rounded-xl text-sm font-semibold transition-all w-full"
+              >
+                Sign Out & Switch Account
+              </button>
+            ) : (
+              <button 
+                onClick={() => router.push("/")}
+                className="mt-6 bg-white/5 hover:bg-white/10 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-all w-full"
+              >
+                Go to Dashboard
+              </button>
+            )}
           </div>
         )}
       </div>
