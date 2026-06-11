@@ -5,6 +5,12 @@ export const listSecrets = async (envId: string): Promise<Secret[]> => {
   const response = await client.get(`/api/environments/${envId}/secrets`);
   return response.data;
 };
+
+export const listSecretsForServiceToken = async (): Promise<Secret[]> => {
+  const client = getApiClient();
+  const response = await client.get(`/api/service-token/secrets`);
+  return response.data;
+};
 export const createSecret = async (envId: string, key: string, value: string): Promise<Secret> => {
   const client = getApiClient();
   const response = await client.post(`/api/environments/${envId}/secrets`, { key, value });

@@ -8,11 +8,20 @@ export const runCommand = new Command('run')
   .argument('<command...>', 'The command and its arguments to run (e.g., "npm run dev")')
   .action(async (commandArgs: string[]) => {
     try {
-      const orgId = await ensureOrganization();
-      const projectId = await ensureProject();
-      const envId = await ensureEnvironment();
-      logger.info('Fetching secrets for injection...');
-      const secrets = await listSecrets(envId);
+      let secrets: any[] = [];
+
+      if (process.env.ENVOY_TOKEN) {
+        logger.info('ENVOY_TOKEN detected. Fetching secrets via Service Token...');
+        const { listSecretsForServiceToken } = await import('../services/secretService.js');
+        secrets = await listSecretsForServiceToken();
+      } else {
+        const orgId = await ensureOrganization();
+        const projectId = await ensureProject();
+        const envId = await ensureEnvironment();
+        logger.info('Fetching secrets for injection...');
+        secrets = await listSecrets(envId);
+      }
+
       // We cannot inject masked values into a real process, it would break the application.
       const hasMasked = secrets.some(s => s.value === '••••••••••••');
       if (hasMasked) {

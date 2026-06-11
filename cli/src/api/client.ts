@@ -10,9 +10,13 @@ export const getApiClient = () => {
       'Content-Type': 'application/json',
     },
   });
-  if (config.token) {
+
+  // Prioritize ENVOY_TOKEN from environment variables for servers (Render/Vercel)
+  const token = process.env.ENVOY_TOKEN || config.token;
+
+  if (token) {
     client.interceptors.request.use((req) => {
-      req.headers.Authorization = `Bearer ${config.token}`;
+      req.headers.Authorization = `Bearer ${token}`;
       return req;
     });
   }
