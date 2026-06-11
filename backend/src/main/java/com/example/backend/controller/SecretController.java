@@ -65,4 +65,21 @@ public class SecretController {
         secretService.deleteSecret(secretId);
         return ResponseEntity.noContent().build();
     }
+
+    /**
+     * Automated Server Endpoint for fetching secrets using a Service Token.
+     * The Environment ID is securely derived from the ServiceTokenFilter identity.
+     * Endpoint: GET /api/service-token/secrets
+     */
+    @GetMapping("/api/service-token/secrets")
+    public ResponseEntity<List<SecretResponseDTO>> getSecretsForServiceToken() {
+        org.springframework.security.core.Authentication auth = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        
+        // Extract the environment ID embedded by the ServiceTokenFilter
+        String allowedEnvId = auth.getName().split(":")[1];
+        
+        List<SecretResponseDTO> response = secretService.getSecretsByEnvironment(UUID.fromString(allowedEnvId));
+        return ResponseEntity.ok(response);
+    }
 }
