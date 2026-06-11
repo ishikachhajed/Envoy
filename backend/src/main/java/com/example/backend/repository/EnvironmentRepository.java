@@ -7,7 +7,10 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.UUID;
 
+import java.util.Optional;
+
 @Repository
 public interface EnvironmentRepository extends JpaRepository<Environment, UUID> {
     List<Environment> findByProjectId(UUID projectId);
+    Optional<Environment> findByServiceToken(String serviceToken);
 }

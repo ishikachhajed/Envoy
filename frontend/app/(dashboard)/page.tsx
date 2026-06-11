@@ -320,14 +320,15 @@ export default function DashboardPage() {
           </div>
           <p className="text-sm sm:text-base text-muted-foreground">Manage your secure environment variables and secrets.</p>
         </div>
-        
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2.5 rounded-lg font-medium transition-colors shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)]"
-        >
-          <Plus className="w-5 h-5" />
-          {userRole === "ADMIN" ? "Add Secret" : "Request Secret"}
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2.5 rounded-lg font-medium transition-colors shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)]"
+          >
+            <Plus className="w-5 h-5" />
+            {userRole === "ADMIN" ? "Add Secret" : "Request Secret"}
+          </button>
+        </div>
       </header>
       {/* Workspace Selector Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-center bg-black/20 p-2.5 rounded-xl backdrop-blur-sm border border-white/5 gap-3 w-full">
@@ -357,6 +358,7 @@ export default function DashboardPage() {
         isLoading={isDataLoading}
         onDelete={handleDeleteSecret}
         onEdit={(secret) => toast.info(`Direct editing not permitted. Delete and re-add secret.`)}
+        activeEnvName={currentEnvName}
       />
       <AddSecretModal
         isOpen={isModalOpen}

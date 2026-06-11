@@ -21,6 +21,9 @@ public class Environment {
     @Column(nullable = false, length = 50)
     private String name;
 
+    @Column(name = "service_token", unique = true)
+    private String serviceToken;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private ZonedDateTime createdAt;
 
@@ -36,4 +39,7 @@ public class Environment {
 
     public ZonedDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(ZonedDateTime createdAt) { this.createdAt = createdAt; }
+
+    public String getServiceToken() { return serviceToken; }
+    public void setServiceToken(String serviceToken) { this.serviceToken = serviceToken; }
 }
