@@ -25,7 +25,17 @@ public class EmailService {
             mailSender.send(message);
         } catch (Exception e) {
             System.err.println("EMAIL ERROR:");
-            e.printStackTrace();
+            //e.printStackTrace();
+        
+            System.err.println(e.getClass().getName());
+            System.err.println(e.getMessage());
+
+            Throwable cause = e.getCause();
+            while (cause != null) {
+                System.err.println("CAUSE: " + cause.getClass().getName());
+                System.err.println("MESSAGE: " + cause.getMessage());
+                cause = cause.getCause();
+}
             throw new RuntimeException("Failed to send verification email");
         }
     }
