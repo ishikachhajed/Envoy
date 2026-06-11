@@ -99,10 +99,29 @@ public class SecretService {
 
     /**
      * Lists all secrets belonging to a specific environment.
-     * Enforces GCM decryption for ADMIN roles and masks values for MEMBER roles.
+     * Supports both Human Users (RBAC) and Service Tokens (Automated Servers).
      */
     @Transactional(readOnly = true)
     public List<SecretResponseDTO> getSecretsByEnvironment(UUID envId) {
+        // 1. Check if the request is from an Automated Server using a Service Token
+        org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isServiceToken = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_SERVICE_TOKEN"));
+
+        if (isServiceToken) {
+            // It's a server! Check if the token is allowed to access THIS environment
+            String tokenIdentity = auth.getName(); // e.g., "service-token:1234-5678-..."
+            String allowedEnvId = tokenIdentity.split(":")[1];
+
+            if (!allowedEnvId.equals(envId.toString())) {
+                throw new CustomAccessDeniedException("Access Denied: This service token is not authorized for this environment.");
+            }
+
+            // Since it's a valid service token for this environment, return all decrypted secrets
+            return fetchAndDecryptSecrets(envId, true);
+        }
+
+        // 2. It's a Human User. Fall back to standard RBAC checks.
         User currentUser = getCurrentUser();
         Environment environment = environmentRepository.findById(envId)
                 .orElseThrow(() -> new RuntimeException("Environment not found."));
@@ -110,15 +129,26 @@ public class SecretService {
         // Trace ownership and return membership to check role
         Membership membership = validateEnvironmentAccess(environment, currentUser.getId());
         boolean isAdmin = membership.getRole() == Role.ADMIN;
+        boolean isDevelopment = environment.getName().equalsIgnoreCase("development");
 
+        // Return secrets. If Admin OR if it's the Development environment, decrypt them.
+        // Members cannot see decrypted values for Staging/Production.
+        boolean shouldDecrypt = isAdmin || isDevelopment;
+        
+        return fetchAndDecryptSecrets(envId, shouldDecrypt);
+    }
+
+    /**
+     * Helper method to fetch and optionally decrypt secrets.
+     */
+    private List<SecretResponseDTO> fetchAndDecryptSecrets(UUID envId, boolean decrypt) {
         List<Secret> secrets = secretRepository.findByEnvironmentId(envId);
 
         return secrets.stream()
                 .map(s -> {
                     try {
-                        // Key Masking: Only Decrypt if active role is ADMIN
                         String displayValue = "••••••••••••";
-                        if (isAdmin) {
+                        if (decrypt) {
                             displayValue = encryptionService.decrypt(s.getSecretValue(), s.getIv());
                         }
 

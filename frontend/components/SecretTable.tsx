@@ -27,17 +27,20 @@ export function SecretTable({
   isLoading,
   onDelete,
   onEdit,
+  activeEnvName,
 }: {
   secrets: Secret[];
   isLoading: boolean;
   onDelete: (id: string) => void;
   onEdit: (secret: Secret) => void;
+  activeEnvName?: string;
 }) {
   const { userRole } = useAuth();
   const [decryptedValues, setDecryptedValues] = useState<Record<string, string>>({});
   const [visibleSecrets, setVisibleSecrets] = useState<Record<string, boolean>>({});
   const [isRevealing, setIsRevealing] = useState<Record<string, boolean>>({});
-  const toggleVisibility = async (secretId: string, secretKey: string) => {
+  
+  const toggleVisibility = async (secretId: string, secretKey: string, secretValue: string) => {
     // 1. If currently visible, simply hide it
     if (visibleSecrets[secretId]) {
       setVisibleSecrets((prev) => ({ ...prev, [secretId]: false }));
@@ -48,14 +51,22 @@ export function SecretTable({
       setVisibleSecrets((prev) => ({ ...prev, [secretId]: true }));
       return;
     }
-    // 3. If role is MEMBER, block decryption attempt
+    // 3. Handle Member Role
     if (userRole !== "ADMIN") {
-      toast.error("Access Denied: Only Admins can reveal decrypted values.", {
-        icon: <ShieldAlert className="w-5 h-5 text-red-400" />,
-      });
-      return;
+      if (activeEnvName === "Development") {
+        // Members DO have access to Development secrets. The backend already sent the real value!
+        // So we don't need to call the /reveal endpoint (which they are blocked from anyway).
+        setDecryptedValues((prev) => ({ ...prev, [secretId]: secretValue }));
+        setVisibleSecrets((prev) => ({ ...prev, [secretId]: true }));
+        return;
+      } else {
+        toast.error("Access Denied: Only Admins can reveal Staging and Production values.", {
+          icon: <ShieldAlert className="w-5 h-5 text-red-400" />,
+        });
+        return;
+      }
     }
-    // 4. Request decrypted value from the backend
+    // 4. Admin Request decrypted value from the backend
     setIsRevealing((prev) => ({ ...prev, [secretId]: true }));
     try {
       const response = await apiFetch<{ value: string }>(`/api/secrets/${secretId}/reveal`);
@@ -82,6 +93,9 @@ export function SecretTable({
       } catch (err) {
         console.error("Failed to decrypt for copy:", err);
       }
+    } else if (userRole !== "ADMIN" && activeEnvName === "Development") {
+      // Members have access to Development secrets natively
+      textToCopy = maskedValue;
     }
     if (textToCopy === "••••••••••••") {
       toast.error("Cannot copy masked secret value. Access denied.");
@@ -146,7 +160,7 @@ export function SecretTable({
                         {displayValue}
                       </span>
                       <button
-                        onClick={() => toggleVisibility(secret.id, secret.key)}
+                        onClick={() => toggleVisibility(secret.id, secret.key, secret.value)}
                         disabled={loading}
                         className="p-1.5 text-muted-foreground hover:text-white transition-colors rounded-md hover:bg-white/10 ml-2 disabled:opacity-50"
                         title={isVisible ? "Hide value" : "Reveal value"}
