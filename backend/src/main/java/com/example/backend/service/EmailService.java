@@ -24,7 +24,9 @@ public class EmailService {
             helper.setText(buildOtpEmailHtml(toEmail, otp), true); 
             mailSender.send(message);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to send verification email. Please try again. Error: " + e.getMessage());
+            System.err.println("EMAIL ERROR:");
+            e.printStackTrace();
+            throw new RuntimeException("Failed to send verification email");
         }
     }
    
@@ -91,7 +93,9 @@ public class EmailService {
             helper.setText(buildInviteEmailHtml(toEmail, orgName, inviteUrl), true);
             mailSender.send(message);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to send invite email. Error: " + e.getMessage());
+            System.err.println("EMAIL ERROR:");
+            e.printStackTrace();
+            throw new RuntimeException("Failed to send invite email");
         }
     }
 
